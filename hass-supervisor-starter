@@ -1,0 +1,84 @@
+#!/bin/bash
+# $1 = start/stop
+#
+
+#############
+# FUNCTIONS #
+#############
+
+
+# CHECK FOR ROOT
+function rootCheck {
+	if [[ $EUID -ne 0 ]]; then
+		echo "[ERROR]: This script must be run as root" 1>&2
+		exit 1
+	fi
+}
+
+# GET CONTAINERID FROM NAME
+function getContainerID {
+	containerName="$1"
+	docker container ls --format "table {{.ID}}\t{{.Names}}" | grep $containerName | awk '{ print $1 }'
+}
+
+# DEFINE CONTAINERS &&  KILL THEM
+function killContainers {
+	declare containerNames=(homeassistant hassio_supervisor hassio_cli hassio_dns hassio_audio hassio_observer hassio_multicast)
+	declare containerID
+	for containerName in "${containerNames[@]}"; do sudo docker container stop $(getContainerID $containerName); done
+	for i in "${containerNames[*]}"; do echo "[STOP][CONTAINERS]: $i"; done
+}
+
+# SET TIMER AND RUN
+function timer {
+	secs=$(($1 * 60))
+	while [ $secs -gt 0 ]; do
+   		echo -ne "[sleep]: $secs\033[0K\r"
+   		sleep 1
+   		: $((secs--))
+	done
+}
+
+# CHECK INPUT
+if [ -z "$1" ]; then
+	echo "[ERROR]: no action given"
+	echo ""
+	echo "##############################################"
+        echo "usage: hass-supervisor-starter [start/stop]"
+        echo "##############################################"
+	exit 1
+fi
+
+
+
+#######
+# RUN #
+#######
+
+# root check
+rootCheck
+
+# choose by action
+if [ $1 = "start" ]
+then
+	echo "[START][SERVICE][1/3]: haos-agent ..."
+	sudo systemctl start haos-agent.service
+	echo "[START][SERVICE][2/3]: hassio-apparmor ..."
+	sudo systemctl start hassio-apparmor.service
+	timer 1
+	echo "[START][SERVICE][3/3]: hassio-supervisor ..."
+	sudo systemctl start hassio-supervisor.service
+	exit 0
+elif [ $1 = "stop" ]
+then
+        sudo systemctl stop haos-agent.service && sudo systemctl stop hassio-supervisor.service && sudo systemctl stop hassio-apparmor.service
+	echo "[STOP][SERVICES]: haos-agent, hassio-supervisor, hassio-apparmor"
+	killContainers
+	echo "[STOP][HASSIO]: all hassio services and containers stopped ..."
+	exit 0
+else
+	echo "##############################################"
+	echo "usage: hass-supervisor-starter [start/stop]"
+	echo "##############################################"
+	exit 1
+fi
