@@ -18,7 +18,7 @@ function rootCheck {
 # GET CONTAINERID FROM NAME
 function getContainerID {
 	containerName="$1"
-	docker container ls --format "table {{.ID}}\t{{.Names}}" | grep $containerName | awk '{ print $1 }'
+	sudo docker container ls --format "table {{.ID}}\t{{.Names}}" | grep $containerName | awk '{ print $1 }'
 }
 
 # DEFINE CONTAINERS &&  KILL THEM
@@ -31,9 +31,9 @@ function killContainers {
 
 # SET TIMER AND RUN
 function timer {
-	secs=$(($1 * 60))
+	secs=$(($1 * 30))
 	while [ $secs -gt 0 ]; do
-   		echo -ne "[sleep]: $secs\033[0K\r"
+   		echo -ne "[SLEEP][SECONDS]: $secs\033[0K\r"
    		sleep 1
    		: $((secs--))
 	done
@@ -71,8 +71,8 @@ then
 	exit 0
 elif [ $1 = "stop" ]
 then
-        sudo systemctl stop haos-agent.service && sudo systemctl stop hassio-supervisor.service && sudo systemctl stop hassio-apparmor.service
 	echo "[STOP][SERVICES]: haos-agent, hassio-supervisor, hassio-apparmor"
+        sudo systemctl stop haos-agent.service && sudo systemctl stop hassio-supervisor.service && sudo systemctl stop hassio-apparmor.service
 	killContainers
 	echo "[STOP][HASSIO]: all hassio services and containers stopped ..."
 	exit 0

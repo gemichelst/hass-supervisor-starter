@@ -1,0 +1,56 @@
+#!/bin/bash
+#
+TIMESTAMP=$(date +%d%m%Y_%H%M%S)
+HASSDIR=/usr/share/hassio
+HASSCONFDIR="$HASSDIR/homeassistant"
+HASSDESTDIR=/mnt/stornas/storage1/BACKUPS/BANANADEV2023
+HASSCONFDESTZIP="$HASSDESTDIR/homeassistant__config___$TIMESTAMP.zip"
+HASSDESTZIP="$HASSDESTDIR/homeassistant__full___$TIMESTAMP.zip"
+
+#############
+# FUNCTIONS #
+#############
+
+
+# CHECK FOR ROOT
+function rootCheck {
+	if [[ $EUID -ne 0 ]]; then
+		echo "[ERROR]: This script must be run as root" 1>&2
+		exit 1
+	fi
+}
+
+function configBackup {
+	echo "[CONFIG|BACKUP]"
+	sudo find $HASSCONFDIR ! -name "*.log*" -type f ! -name "*.db*" -type f -print | sudo zip $HASSCONFDESTZIP -@
+}
+
+function fullBackup {
+	echo "[FULL|BACKUP]"
+	sudo find $HASSDIR ! -name "*.log*" -type f ! -name "*.db*" -type f ! -name "*.tar*" -type f  -print | sudo zip $HASSDESTZIP -@
+}
+
+function usage {
+	echo "________________________________________________"
+	echo "USAGE: hassio-custom-backup [type]"
+	echo "EXAMPLE: hassio-custom-backup full"
+}
+
+function selectType {
+	if [ -z $1 ]
+	then
+		usage
+	elif [ $1 = "full" ]
+	then
+		fullBackup
+	elif [ $1 = "config" ]
+	then
+		configBackup
+	else
+		usage
+	fi
+}
+
+rootCheck
+selectType $1
+exit 0
